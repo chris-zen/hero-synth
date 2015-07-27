@@ -1,0 +1,21 @@
+[package]
+name = "herosynth"
+version = "0.1.0"
+authors = ["Christian Perez-Llamas <cllamas@tripadvisor.com>"]
+build = "build.rs"
+
+[build-dependencies.wfgen]
+path = "components/wfgen"
+
+[dependencies]
+portaudio="*"
+docopt = "0.6.67"
+rand = "0.3.8"
+
+[lib]
+name = "herosynth"
+path = "src/lib.rs"
+
+[[bin]]
+name = "herosynth"
+path = "src/main.rs"
