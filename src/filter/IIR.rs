@@ -1,152 +1,264 @@
 //!
 //! Infinite Impulse Response (IIR) filters
 //!
+//! Based on https://code.google.com/p/amsynth/source/browse/src/VoiceBoard/LowPassFilter.cc
+//!
 
 use std::f64::consts::PI;
-use std::cmp;
 use std::fmt::Display;
 use std::fmt;
 
-const FREQ_DELTA: f64 = 0.01;
-const FREQ_MIN: f64 = 10.0;
+const CUTOFF_DELTA: f64 = 0.01;
+const CUTOFF_MIN: f64 = 10.0;
 
-fn limit_freq(freq: f64, sample_rate: f64) -> f64 {
-    freq.max(FREQ_MIN).min(sample_rate / 2.0)
+fn limit_cutoff(cutoff: f64, sample_rate: f64) -> f64 {
+    cutoff.max(CUTOFF_MIN).min((sample_rate - 1.0) / 2.0)
 }
 
 #[derive(Debug)]
-pub struct Coeffs([f64; 5]);
+pub struct Coeffs {
+    a0: f64,
+    a1: f64,
+    a2: f64,
+    b1: f64,
+    b2: f64
+}
 
 impl Display for Coeffs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for i in 0..5 {
-            try!(write!(f, "{}, ", self.0[i]));
-        }
-        write!(f, "\n")
+        write!(f, "a0={}, a1={}, a2={}, b1={}, b2={}",
+                    self.a0, self.a1, self.a2, self.b1, self.b2)
     }
 }
+
 impl Default for Coeffs {
      fn default() -> Self {
-         Coeffs([0.0; 5])
+         Coeffs {
+             a0: 0.0,
+             a1: 0.0,
+             a2: 0.0,
+             b1: 0.0,
+             b2: 0.0
+         }
      }
 }
 
 impl Coeffs {
-    pub fn new(c1: f64, c2: f64, c3: f64, c4: f64, c5: f64, c6: f64) -> Coeffs {
-        let a = 1.0 / c4;
-        Coeffs([
-            c1 * a,
-            c2 * a,
-            c3 * a,
-            c5 * a,
-            c6 * a])
+    pub fn new(a0: f64, a1: f64, a2: f64, b1: f64, b2: f64) -> Coeffs {
+        Coeffs {
+            a0: a0,
+            a1: a1,
+            a2: a2,
+            b1: b1,
+            b2: b2
+        }
     }
 
-    fn lowpass(sample_rate: f64, freq: f64) -> Coeffs {
-        let n: f64 = 1.0 / (PI * freq / sample_rate).tan();
-        let n_sq = n * n;
-        let c1 = 1.0 / (1.0 + (2.0f64).sqrt() * n + n_sq);
+    fn common(sample_rate: f64, cutoff: f64, res: f64) -> (f64, f64, f64) {
+        let w: f64 = cutoff / sample_rate; // cutoff freq [ 0 <= w <= 0.5 ]
+        let r: f64 = (0.001f64).max(2.0 * (1.0 - res)); // r is 1/Q (sqrt(2) for a butterworth response)
 
-        Coeffs::new(
-            c1,
-            c1 * 2.0,
-            c1,
-            1.0,
-            c1 * 2.0 * (1.0 - n_sq),
-            c1 * (1.0 - (2.0f64).sqrt() * n + n_sq))
+        let k = (w * PI).tan();
+        let k2 = k * k;
+        let rk = r * k;
+        let bh = 1.0 + rk + k2;
+
+        (k2, rk, bh)
     }
 
-    fn highpass(sample_rate: f64, freq: f64) -> Coeffs {
-        let n: f64 = 1.0 / (PI * freq / sample_rate).tan();
-        let n_sq = n * n;
-        let c1 = 1.0 / (1.0 + (2.0f64).sqrt() * n + n_sq);
+    fn lowpass(sample_rate: f64, cutoff: f64, res: f64) -> Coeffs {
 
-        Coeffs::new(
-            c1,
-            c1 * -2.0,
-            c1,
-            1.0,
-            c1 * 2.0 * (n_sq - 1.0),
-            c1 * (1.0 - (2.0f64).sqrt() * n + n_sq))
+        let (k2, rk, bh) = Self::common(sample_rate, cutoff, res);
+
+        let a0: f64 = k2 / bh;
+
+        Coeffs {
+            a0: a0,
+            a1: a0 * 2.0,
+            a2: a0,
+            b1: (2.0 * (k2 - 1.0)) / bh,
+            b2: (1.0 - rk + k2) / bh,
+        }
     }
 
+    fn highpass(sample_rate: f64, cutoff: f64, res: f64) -> Coeffs {
 
+        let (k2, rk, bh) = Self::common(sample_rate, cutoff, res);
+
+        let a0: f64 = 1.0 / bh;
+
+        Coeffs {
+            a0:  a0,
+            a1: -2.0 / bh,
+            a2:  a0,
+            b1: (2.0 * (k2 - 1.0)) / bh,
+            b2: (1.0 - rk + k2) / bh,
+        }
+    }
+
+    fn bandpass(sample_rate: f64, cutoff: f64, res: f64) -> Coeffs {
+
+        let (k2, rk, bh) = Self::common(sample_rate, cutoff, res);
+
+        Coeffs {
+            a0:  rk / bh,
+            a1:  0.0,
+            a2: -rk / bh,
+            b1: (2.0 * (k2 - 1.0)) / bh,
+            b2: (1.0 - rk + k2) / bh,
+        }
+    }
+
+    fn bandstop(sample_rate: f64, cutoff: f64, res: f64) -> Coeffs {
+
+        let (k2, rk, bh) = Self::common(sample_rate, cutoff, res);
+
+        let a0: f64 = (1.0 + k2) / bh;
+        let a1: f64 = (2.0 * (k2 - 1.0)) / bh;
+
+        Coeffs {
+            a0:  a0,
+            a1:  a1,
+            a2:  a0,
+            b1:  a1,
+            b2: (1.0 - rk + k2) / bh,
+        }
+    }
 }
 
 pub enum Design {
     LowPass = 0,
-    HighPass
+    HighPass,
+    BandPass,
+    BandStop
+}
+
+pub enum Slope {
+    Slope12 = 0,
+    Slope24
 }
 
 pub struct IIR {
     design: Design,
+    slope: Slope,
     sample_rate: f64,
-    freq: f64,
-    q: f64,
-    gain: f64,
+    cutoff: f64,
+    res: f64,
     enabled: bool,
     pub coeff: Coeffs,
-    v1: f64,
-    v2: f64,
+    invalid_coeff: bool,
+    d1: f64,
+    d2: f64,
+    d3: f64,
+    d4: f64
 }
 
 impl IIR {
-    pub fn new(design: Design, sample_rate: f64, freq: f64, q: f64, gain: f64) -> IIR {
+    pub fn new(design: Design, slope: Slope, sample_rate: f64, cutoff: f64, res: f64) -> IIR {
         assert!(sample_rate > 0.0);
-        assert!(freq >= 0.0);
-        assert!(q >= 0.0);
+        assert!(cutoff >= 0.0);
+        assert!(res >= 0.0);
 
         let mut f = IIR {
             design: design,
+            slope: slope,
             sample_rate: sample_rate,
-            freq: limit_freq(freq, sample_rate),
-            q: q,
-            gain: gain,
+            cutoff: limit_cutoff(cutoff, sample_rate),
+            res: res,
             enabled: true,
             coeff: Coeffs::default(),
-            v1: 0.0,
-            v2: 0.0
+            invalid_coeff: true,
+            d1: 0.0, d2: 0.0, d3: 0.0, d4: 0.0
         };
-        f.update_coeff();
+        f.update_coeffs();
         f
     }
 
-    pub fn lowpass(sample_rate: f64, freq: f64) -> IIR {
-        IIR::new(Design::LowPass, sample_rate, freq, 0.0, 0.0)
+    pub fn lowpass12(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::LowPass, Slope::Slope12, sample_rate, cutoff, res)
     }
 
-    pub fn highpass(sample_rate: f64, freq: f64) -> IIR {
-        IIR::new(Design::HighPass, sample_rate, freq, 0.0, 0.0)
+    pub fn highpass12(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::HighPass, Slope::Slope12, sample_rate, cutoff, res)
     }
 
-    fn update_coeff(&mut self) {
-        self.coeff = match self.design {
-            Design::LowPass => Coeffs::lowpass(self.sample_rate, self.freq),
-            Design::HighPass => Coeffs::highpass(self.sample_rate, self.freq),
+    pub fn bandpass12(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::BandPass, Slope::Slope12, sample_rate, cutoff, res)
+    }
+
+    pub fn bandstop12(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::BandStop, Slope::Slope12, sample_rate, cutoff, res)
+    }
+
+    pub fn lowpass24(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::LowPass, Slope::Slope24, sample_rate, cutoff, res)
+    }
+
+    pub fn highpass24(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::HighPass, Slope::Slope24, sample_rate, cutoff, res)
+    }
+
+    pub fn bandpass24(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::BandPass, Slope::Slope24, sample_rate, cutoff, res)
+    }
+
+    pub fn bandstop24(sample_rate: f64, cutoff: f64, res: f64) -> IIR {
+        IIR::new(Design::BandStop, Slope::Slope24, sample_rate, cutoff, res)
+    }
+
+    pub fn set_cutoff(&mut self, cutoff: f64) {
+        if (self.cutoff - cutoff).abs() >= CUTOFF_DELTA {
+            self.cutoff = limit_cutoff(cutoff, self.sample_rate);
+            self.invalid_coeff = true;
         }
     }
 
-    pub fn update_freq(&mut self, freq: f64) {
-        if (self.freq - freq).abs() >= FREQ_DELTA {
-            self.freq = limit_freq(freq, self.sample_rate);
-            self.update_coeff();
+    pub fn set_res(&mut self, res: f64) {
+        if self.res != res {
+            self.res = res;
+            self.invalid_coeff = true;
         }
     }
 
-    pub fn update_q(&mut self, q: f64) {
-        if self.q != q {
-            self.q = q;
-            self.update_coeff();
+    pub fn update_coeffs(&mut self) {
+        if self.invalid_coeff {
+            self.coeff = match self.design {
+                Design::LowPass => Coeffs::lowpass(self.sample_rate, self.cutoff, self.res),
+                Design::HighPass => Coeffs::highpass(self.sample_rate, self.cutoff, self.res),
+                Design::BandPass => Coeffs::bandpass(self.sample_rate, self.cutoff, self.res),
+                Design::BandStop => Coeffs::bandstop(self.sample_rate, self.cutoff, self.res),
+            }
         }
     }
 
     pub fn process(&mut self, signal: f64) -> f64 {
-        let c = self.coeff.0;
-        let out = c[0] * signal + self.v1;
+        if self.enabled {
+            let Coeffs { a0, a1, a2, b1, b2 } = self.coeff;
 
-        self.v1 = c[1] * signal - c[3] * out + self.v2;
-        self.v2 = c[2] * signal - c[4] * out;
+            match self.slope {
+                Slope::Slope12 => {
+                    let out =           a0 * signal + self.d1;
+                    self.d1 = self.d2 + a1 * signal - b1 * out;
+                    self.d2 =           a2 * signal - b2 * out;
+                    self.d3 = 0.0;
+                    self.d4 = 0.0;
+                    out
+                },
 
-        out
+                Slope::Slope24 => {
+                    let out =           a0 * signal + self.d1;
+                    self.d1 = self.d2 + a1 * signal - b1 * out;
+                    self.d2 =           a2 * signal - b2 * out;
+                    let signal = out;
+                    let out =           a0 * signal + self.d3;
+                    self.d3 = self.d4 + a1 * signal - b1 * out;
+                    self.d4 =           a2 * signal - b2 * out;
+                    out
+                }
+            }
+        }
+        else {
+            signal
+        }
     }
 }

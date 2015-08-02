@@ -74,12 +74,11 @@ fn main() {
     //om2.set_amplitude(mi * fm2);
     om2.set_base_frequency(fm2);
 
-    let flt_freq = 10000.0;
-    let fbw = 0.0;
-    let mut flt1 = IIR::highpass(SAMPLE_RATE, flt_freq);
-    let mut flt2 = IIR::highpass(SAMPLE_RATE, flt_freq);
-    let mut flt3 = IIR::highpass(SAMPLE_RATE, flt_freq);
-    let mut flt4 = IIR::highpass(SAMPLE_RATE, flt_freq);
+    let flt_freq = 220.0;
+    let flt_freq_mod = 0.0;
+    let flt_res = 0.5;
+    let flt_res_mod = 0.4;
+    let mut flt1 = IIR::lowpass12(SAMPLE_RATE, flt_freq, flt_res);
 
     // Construct a custom callback function - in this case we're using a FnMut closure.
     let callback = Box::new(move |
@@ -97,14 +96,10 @@ fn main() {
             //oc1.set_amplitude_modulation(ms1);
             oc1.set_freq_modulation(ms1);
 
-            //flt1.update_freq(flt_freq + fbw * ms2);
-            //flt2.update_freq(flt_freq + fbw * ms2);
-            //flt3.update_freq(flt_freq + fbw * ms2);
-            //flt4.update_freq(flt_freq + fbw * ms2);
-            //let cs = flt1.process(cs);
-            //let cs = flt2.process(cs);
-            //let cs = flt3.process(cs);
-            //let cs = flt4.process(cs);
+            flt1.set_cutoff(flt_freq + flt_freq_mod * ms2);
+            flt1.set_res(flt_res + flt_res_mod * ms2);
+            flt1.update_coeffs();
+            let cs = flt1.process(cs);
 
             sample[0] = cs as f32;
             sample[1] = cs as f32;
