@@ -10,6 +10,7 @@ use portaudio::pa;
 extern crate herosynth;
 use herosynth::wavetable;
 use herosynth::oscillator::Oscillator;
+use herosynth::filter::IIR::IIR;
 
 const SAMPLE_RATE: f64 = 44_100.0;
 const CHANNELS: u32 = 2;
@@ -57,9 +58,9 @@ fn main() {
 
     let wt = &wavetable::SIN;
 
-    let fc = 220.0f64;
-    let fm1 = 4.0f64;
-    let fm2 = 220.0f64;
+    let fc = 440.0f64;
+    let fm1 = 220.0f64;
+    let fm2 = 0.50f64;
     let mi = 6.0;
 
     let mut oc1 = Oscillator::new(SAMPLE_RATE, wt);
@@ -70,27 +71,43 @@ fn main() {
     om1.set_base_frequency(fm1);
 
     let mut om2 = Oscillator::new(SAMPLE_RATE, wt);
-    om2.set_amplitude(mi * fm2);
+    //om2.set_amplitude(mi * fm2);
     om2.set_base_frequency(fm2);
+
+    let flt_freq = 10000.0;
+    let fbw = 0.0;
+    let mut flt1 = IIR::highpass(SAMPLE_RATE, flt_freq);
+    let mut flt2 = IIR::highpass(SAMPLE_RATE, flt_freq);
+    let mut flt3 = IIR::highpass(SAMPLE_RATE, flt_freq);
+    let mut flt4 = IIR::highpass(SAMPLE_RATE, flt_freq);
 
     // Construct a custom callback function - in this case we're using a FnMut closure.
     let callback = Box::new(move |
-        input: &[f32],
+        _input: &[f32],
         output: &mut[f32],
-        frames: u32,
-        time_info: &pa::StreamCallbackTimeInfo,
+        _frames: u32,
+        _time_info: &pa::StreamCallbackTimeInfo,
         _flags: pa::StreamCallbackFlags,
         | -> pa::StreamCallbackResult {
 
         for sample in output.chunks_mut(CHANNELS as usize) {
-            let cs = oc1.process() as f32;
+            let cs = oc1.process();
             let ms1 = om1.process();
             let ms2 = om2.process();
-            //oc1.set_amplitude(value2);
-            oc1.set_phase_modulation(ms1 + ms2);
+            //oc1.set_amplitude_modulation(ms1);
+            oc1.set_freq_modulation(ms1);
 
-            sample[0] = cs;
-            sample[1] = cs;
+            //flt1.update_freq(flt_freq + fbw * ms2);
+            //flt2.update_freq(flt_freq + fbw * ms2);
+            //flt3.update_freq(flt_freq + fbw * ms2);
+            //flt4.update_freq(flt_freq + fbw * ms2);
+            //let cs = flt1.process(cs);
+            //let cs = flt2.process(cs);
+            //let cs = flt3.process(cs);
+            //let cs = flt4.process(cs);
+
+            sample[0] = cs as f32;
+            sample[1] = cs as f32;
         }
 
         //println!("offset={}, frames={}", offset, frames);

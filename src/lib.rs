@@ -7,3 +7,5 @@
 pub mod wavetable;
 
 pub mod oscillator;
+
+pub mod filter;
