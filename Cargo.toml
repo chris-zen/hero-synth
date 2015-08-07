@@ -8,9 +8,11 @@ build = "build.rs"
 path = "components/wfgen"
 
 [dependencies]
-portaudio="*"
+portaudio =   "0.4.17"
 docopt = "0.6.67"
 rand = "0.3.8"
+# serde = "0.4.3"
+# serde_macros = "0.4.4"
 
 [lib]
 name = "herosynth"

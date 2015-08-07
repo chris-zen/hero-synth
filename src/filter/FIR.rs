@@ -1,7 +1,0 @@
-struct OnePole {
-
-}
-
-struct Convolution {
-
-}

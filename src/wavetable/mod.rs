@@ -10,6 +10,14 @@ impl<'a> Wavetable<'a> {
         }
     }
 
+    pub fn from_name<'b>(name: &'b str) -> Wavetable {
+        match name {
+            "sin" => Wavetable {data: sin::LUT},
+            "saw" => Wavetable {data: saw::LUT},
+            _ => panic!(format!("Unknown wavetable: {}", name)),
+        }
+    }
+
     pub fn size(&self) -> usize {
         return self.data.len();
     }
@@ -28,11 +36,10 @@ impl<'a> Wavetable<'a> {
         return value + diff * fraction;
     }
 }
-
-mod sin;
+pub mod sin;
 
 pub static SIN: Wavetable<'static> = Wavetable {data: sin::LUT};
 
-mod saw;
+pub mod saw;
 
 pub static SAW: Wavetable<'static> = Wavetable {data: saw::LUT};

@@ -10,7 +10,8 @@ use portaudio::pa;
 extern crate herosynth;
 use herosynth::wavetable;
 use herosynth::oscillator::Oscillator;
-use herosynth::filter::IIR::IIR;
+use herosynth::filter::iir::IIR;
+use herosynth::filter::Filter;
 
 const SAMPLE_RATE: f64 = 44_100.0;
 const CHANNELS: u32 = 2;
@@ -63,21 +64,19 @@ fn main() {
     let fm2 = 0.50f64;
     let mi = 6.0;
 
-    let mut oc1 = Oscillator::new(SAMPLE_RATE, wt);
-    oc1.set_base_frequency(fc);
+    let mut oc1 = Oscillator::new(SAMPLE_RATE, wt, fc);
 
-    let mut om1 = Oscillator::new(SAMPLE_RATE, wt);
+    let mut om1 = Oscillator::new(SAMPLE_RATE, wt, fm1);
     om1.set_amplitude(mi * fm1);
-    om1.set_base_frequency(fm1);
 
-    let mut om2 = Oscillator::new(SAMPLE_RATE, wt);
+    let mut om2 = Oscillator::new(SAMPLE_RATE, wt, fm2);
     //om2.set_amplitude(mi * fm2);
-    om2.set_base_frequency(fm2);
 
     let flt_freq = 220.0;
     let flt_freq_mod = 0.0;
     let flt_res = 0.5;
     let flt_res_mod = 0.4;
+
     let mut flt1 = IIR::lowpass12(SAMPLE_RATE, flt_freq, flt_res);
 
     // Construct a custom callback function - in this case we're using a FnMut closure.
@@ -97,8 +96,7 @@ fn main() {
             oc1.set_freq_modulation(ms1);
 
             flt1.set_cutoff(flt_freq + flt_freq_mod * ms2);
-            flt1.set_res(flt_res + flt_res_mod * ms2);
-            flt1.update_coeffs();
+            flt1.set_resonance(flt_res + flt_res_mod * ms2);
             let cs = flt1.process(cs);
 
             sample[0] = cs as f32;

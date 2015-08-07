@@ -1,11 +1,12 @@
-use ::std::f64::consts::PI;
+use std::f64::consts::PI;
 
-use wavetable::Wavetable;
+use wavetable::{self, Wavetable};
+use patch;
 
 pub struct Oscillator<'a> {
     is_enabled: bool,
 
-    wavetable: &'a Wavetable<'a>,
+    wavetable: Wavetable<'a>,
     freq_to_table_incr: f64,
     table_incr: f64,
     initial_phase: f64,
@@ -23,12 +24,12 @@ pub struct Oscillator<'a> {
     phase_mod: f64,         // Phase modulation calculated from frequency and freq_mod
 }
 
-impl<'a> Oscillator<'a> {
-    pub fn new(sample_rate: f64, wavetable: &'a Wavetable<'a>) -> Oscillator<'a> {
-        let mut o = Oscillator {
+impl<'a> Default for Oscillator<'a> {
+    fn default() -> Self {
+        Oscillator {
             is_enabled: true,
-            wavetable: wavetable,
-            freq_to_table_incr: wavetable.size() as f64 / sample_rate,
+            wavetable: Wavetable::new(wavetable::sin::LUT),
+            freq_to_table_incr: 0.0,
             table_incr: 0.0,
             initial_phase: 0.0,
             table_offset: 0.0,
@@ -41,10 +42,57 @@ impl<'a> Oscillator<'a> {
             detune: 0.0,
             frequency: 0.0,
             phase_mod: 0.0
+        }
+    }
+}
+
+impl<'a> Oscillator<'a> {
+    pub fn new(sample_rate: f64, wavetable: Wavetable<'a>, freq: f64) -> Oscillator<'a> {
+        let wt_size = wavetable.size() as f64;
+        let mut o = Oscillator {
+            wavetable: wavetable,
+            freq_to_table_incr: wt_size / sample_rate,
+            base_frequency: freq,
+            ..Default::default()
         };
-        o.reset_phase();
-        o.update_frequency();
+        o.init();
         o
+    }
+
+    pub fn from_wavetable(sample_rate: f64, wavetable: Wavetable<'a>) -> Oscillator<'a> {
+        let wt_size = wavetable.size() as f64;
+        let mut o = Oscillator {
+            wavetable: wavetable,
+            freq_to_table_incr: wt_size / sample_rate,
+            ..Default::default()
+        };
+        o.init();
+        o
+    }
+
+    pub fn from_patch<'b>(sample_rate: f64, osc_desc: &'b patch::Osc) -> Oscillator<'b> {
+        let wt_name: &'b str = &osc_desc.wavetable;
+        let wavetable = wavetable::Wavetable::from_name(wt_name);
+        let wt_size = wavetable.size() as f64;
+        let mut o = Oscillator {
+            is_enabled: osc_desc.is_enabled,
+            wavetable: wavetable,
+            freq_to_table_incr: wt_size / sample_rate,
+            amplitude: osc_desc.amplitude,
+            is_fixed_freq: osc_desc.is_fixed_freq,
+            base_frequency: osc_desc.base_frequency,
+            octaves: osc_desc.octaves,
+            semitones: osc_desc.semitones,
+            detune: osc_desc.detune,
+            ..Default::default()
+        };
+        o.init();
+        o
+    }
+
+    fn init(&mut self) {
+        self.reset_phase();
+        self.update_frequency();
     }
 
     fn reset_phase(&mut self) {

@@ -7,6 +7,7 @@
 use std::f64::consts::PI;
 use std::fmt::Display;
 use std::fmt;
+use filter::{Design, Slope, Filter};
 
 const CUTOFF_DELTA: f64 = 0.01;
 const CUTOFF_MIN: f64 = 10.0;
@@ -126,18 +127,6 @@ impl Coeffs {
     }
 }
 
-pub enum Design {
-    LowPass = 0,
-    HighPass,
-    BandPass,
-    BandStop
-}
-
-pub enum Slope {
-    Slope12 = 0,
-    Slope24
-}
-
 pub struct IIR {
     design: Design,
     slope: Slope,
@@ -146,11 +135,9 @@ pub struct IIR {
     res: f64,
     enabled: bool,
     pub coeff: Coeffs,
-    invalid_coeff: bool,
-    d1: f64,
-    d2: f64,
-    d3: f64,
-    d4: f64
+    d1: f64, d2: f64, d3: f64, d4: f64,
+    invalid_coeffs: bool,
+    invalid_delays: bool,
 }
 
 impl IIR {
@@ -167,8 +154,9 @@ impl IIR {
             res: res,
             enabled: true,
             coeff: Coeffs::default(),
-            invalid_coeff: true,
-            d1: 0.0, d2: 0.0, d3: 0.0, d4: 0.0
+            d1: 0.0, d2: 0.0, d3: 0.0, d4: 0.0,
+            invalid_coeffs: true,
+            invalid_delays: true,
         };
         f.update_coeffs();
         f
@@ -206,33 +194,64 @@ impl IIR {
         IIR::new(Design::BandStop, Slope::Slope24, sample_rate, cutoff, res)
     }
 
-    pub fn set_cutoff(&mut self, cutoff: f64) {
+    fn update_coeffs(&mut self) {
+        self.coeff = match self.design {
+            Design::LowPass => Coeffs::lowpass(self.sample_rate, self.cutoff, self.res),
+            Design::HighPass => Coeffs::highpass(self.sample_rate, self.cutoff, self.res),
+            Design::BandPass => Coeffs::bandpass(self.sample_rate, self.cutoff, self.res),
+            Design::BandStop => Coeffs::bandstop(self.sample_rate, self.cutoff, self.res),
+        }
+    }
+
+    fn reset_delays(&mut self) {
+        self.d1 = 0.0; self.d2 = 0.0; self.d3 = 0.0; self.d4 = 0.0;
+    }
+}
+
+impl Filter for IIR {
+    fn set_enabled(&mut self, enabled: bool) {
+        if self.enabled != enabled {
+            self.enabled = enabled;
+            self.invalid_delays = true;
+        }
+    }
+
+    fn set_type(&mut self, design: Design) {
+        self.design = design;
+        self.invalid_coeffs = true;
+        self.invalid_delays = true;
+    }
+
+    fn set_slope(&mut self, slope: Slope) {
+        self.slope = slope;
+        self.invalid_coeffs = true;
+        self.invalid_delays = true;
+    }
+
+    fn set_cutoff(&mut self, cutoff: f64) {
         if (self.cutoff - cutoff).abs() >= CUTOFF_DELTA {
             self.cutoff = limit_cutoff(cutoff, self.sample_rate);
-            self.invalid_coeff = true;
+            self.invalid_coeffs = true;
         }
     }
 
-    pub fn set_res(&mut self, res: f64) {
+    fn set_resonance(&mut self, res: f64) {
         if self.res != res {
             self.res = res;
-            self.invalid_coeff = true;
+            self.invalid_coeffs = true;
         }
     }
 
-    pub fn update_coeffs(&mut self) {
-        if self.invalid_coeff {
-            self.coeff = match self.design {
-                Design::LowPass => Coeffs::lowpass(self.sample_rate, self.cutoff, self.res),
-                Design::HighPass => Coeffs::highpass(self.sample_rate, self.cutoff, self.res),
-                Design::BandPass => Coeffs::bandpass(self.sample_rate, self.cutoff, self.res),
-                Design::BandStop => Coeffs::bandstop(self.sample_rate, self.cutoff, self.res),
-            }
-        }
-    }
-
-    pub fn process(&mut self, signal: f64) -> f64 {
+    fn process(&mut self, signal: f64) -> f64 {
         if self.enabled {
+            if self.invalid_coeffs {
+                if self.invalid_delays {
+                    self.reset_delays();
+                }
+
+                self.update_coeffs();
+            }
+
             let Coeffs { a0, a1, a2, b1, b2 } = self.coeff;
 
             match self.slope {
