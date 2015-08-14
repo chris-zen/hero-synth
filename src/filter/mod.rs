@@ -1,5 +1,6 @@
-pub enum Design {
-    LowPass = 0,
+pub enum Mode {
+    ByPass = 0,
+    LowPass,
     HighPass,
     BandPass,
     BandStop
@@ -11,8 +12,9 @@ pub enum Slope {
 }
 
 pub trait Filter {
+    fn reset(&mut self);
     fn set_enabled(&mut self, enabled: bool);
-    fn set_type(&mut self, design: Design);
+    fn set_mode(&mut self, mode: Mode);
     fn set_slope(&mut self, slope: Slope);
     fn set_cutoff(&mut self, cutoff: f64);
     fn set_resonance(&mut self, res: f64);

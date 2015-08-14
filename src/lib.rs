@@ -10,6 +10,8 @@ pub mod oscillator;
 
 pub mod filter;
 
+pub mod panning;
+
 pub mod patch;
 
 pub mod voice;

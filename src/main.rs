@@ -1,14 +1,13 @@
 use std::error::Error;
-use ::std::f64::consts::PI;
 
-extern crate rand;
-use rand::Rng;
+//extern crate rand;
+//use rand::Rng;
 
 extern crate portaudio;
 use portaudio::pa;
 
 extern crate herosynth;
-use herosynth::wavetable;
+use herosynth::wavetable::{self, Wavetable};
 use herosynth::oscillator::Oscillator;
 use herosynth::filter::iir::IIR;
 use herosynth::filter::Filter;
@@ -57,27 +56,29 @@ fn main() {
         panic!("The given stream format is unsupported: {:?}", err.description());
     }
 
-    let wt = &wavetable::SIN;
+    let wt1 = Wavetable::from_stock(wavetable::Stock::Sin);
+    let wt2 = Wavetable::from_stock(wavetable::Stock::Sin);
+    let wt3 = Wavetable::from_stock(wavetable::Stock::Sin);
 
     let fc = 440.0f64;
     let fm1 = 220.0f64;
     let fm2 = 0.50f64;
     let mi = 6.0;
 
-    let mut oc1 = Oscillator::new(SAMPLE_RATE, wt, fc);
+    let mut oc1 = Oscillator::new(SAMPLE_RATE, wt1, fc);
 
-    let mut om1 = Oscillator::new(SAMPLE_RATE, wt, fm1);
+    let mut om1 = Oscillator::new(SAMPLE_RATE, wt2, fm1);
     om1.set_amplitude(mi * fm1);
 
-    let mut om2 = Oscillator::new(SAMPLE_RATE, wt, fm2);
+    let mut om2 = Oscillator::new(SAMPLE_RATE, wt3, fm2);
     //om2.set_amplitude(mi * fm2);
 
-    let flt_freq = 220.0;
+    let flt_freq = 1440.0;
     let flt_freq_mod = 0.0;
     let flt_res = 0.5;
     let flt_res_mod = 0.4;
 
-    let mut flt1 = IIR::lowpass12(SAMPLE_RATE, flt_freq, flt_res);
+    let mut flt1 = IIR::lowpass24(SAMPLE_RATE, flt_freq, flt_res);
 
     // Construct a custom callback function - in this case we're using a FnMut closure.
     let callback = Box::new(move |
@@ -95,7 +96,7 @@ fn main() {
             //oc1.set_amplitude_modulation(ms1);
             oc1.set_freq_modulation(ms1);
 
-            flt1.set_cutoff(flt_freq + flt_freq_mod * ms2);
+            //flt1.set_cutoff(flt_freq + flt_freq_mod * ms2);
             flt1.set_resonance(flt_res + flt_res_mod * ms2);
             let cs = flt1.process(cs);
 

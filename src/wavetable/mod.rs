@@ -1,20 +1,40 @@
 
+pub enum Stock {
+    Sin = 0,
+    Saw,
+}
+
+impl Stock {
+    pub fn from_name(name: &str) -> Option<Stock> {
+        match name {
+            "sin" => Some(Stock::Sin),
+            "saw" => Some(Stock::Saw),
+            _ => None
+        }
+    }
+}
+
 pub struct Wavetable<'a> {
     data: &'a [f64],
 }
 
+impl<'a> Default for Wavetable<'a> {
+    fn default() -> Self {
+        Wavetable {data: sin::LUT}
+    }
+}
+
 impl<'a> Wavetable<'a> {
-    pub fn new(data: &'a [f64]) -> Wavetable {
+    pub fn new(data: &'a [f64]) -> Wavetable<'a> {
         Wavetable {
             data: data
         }
     }
 
-    pub fn from_name<'b>(name: &'b str) -> Wavetable {
-        match name {
-            "sin" => Wavetable {data: sin::LUT},
-            "saw" => Wavetable {data: saw::LUT},
-            _ => panic!(format!("Unknown wavetable: {}", name)),
+    pub fn from_stock(stock: Stock) -> Wavetable<'a> {
+        match stock {
+            Stock::Sin => Wavetable {data: sin::LUT},
+            Stock::Saw => Wavetable {data: saw::LUT},
         }
     }
 
@@ -36,10 +56,6 @@ impl<'a> Wavetable<'a> {
         return value + diff * fraction;
     }
 }
+
 pub mod sin;
-
-pub static SIN: Wavetable<'static> = Wavetable {data: sin::LUT};
-
 pub mod saw;
-
-pub static SAW: Wavetable<'static> = Wavetable {data: saw::LUT};

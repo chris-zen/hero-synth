@@ -28,7 +28,7 @@ impl<'a> Default for Oscillator<'a> {
     fn default() -> Self {
         Oscillator {
             is_enabled: true,
-            wavetable: Wavetable::new(wavetable::sin::LUT),
+            wavetable: Wavetable::default(),
             freq_to_table_incr: 0.0,
             table_incr: 0.0,
             initial_phase: 0.0,
@@ -59,6 +59,14 @@ impl<'a> Oscillator<'a> {
         o
     }
 
+    pub fn from_sample_rate(sample_rate: f64) -> Oscillator<'a> {
+        let mut o = Oscillator::default();
+        let wt_size = o.wavetable.size() as f64;
+        o.freq_to_table_incr = wt_size / sample_rate;
+        o.init();
+        o
+    }
+
     pub fn from_wavetable(sample_rate: f64, wavetable: Wavetable<'a>) -> Oscillator<'a> {
         let wt_size = wavetable.size() as f64;
         let mut o = Oscillator {
@@ -70,9 +78,12 @@ impl<'a> Oscillator<'a> {
         o
     }
 
-    pub fn from_patch<'b>(sample_rate: f64, osc_desc: &'b patch::Osc) -> Oscillator<'b> {
-        let wt_name: &'b str = &osc_desc.wavetable;
-        let wavetable = wavetable::Wavetable::from_name(wt_name);
+    pub fn from_patch_def(sample_rate: f64, osc_desc: &patch::Osc) -> Oscillator<'a> {
+        let wt_stock = match wavetable::Stock::from_name(&osc_desc.wavetable) {
+            Some(stock) => stock,
+            None => wavetable::Stock::Sin,
+        };
+        let wavetable = Wavetable::from_stock(wt_stock);
         let wt_size = wavetable.size() as f64;
         let mut o = Oscillator {
             is_enabled: osc_desc.is_enabled,
@@ -93,6 +104,10 @@ impl<'a> Oscillator<'a> {
     fn init(&mut self) {
         self.reset_phase();
         self.update_frequency();
+    }
+
+    pub fn reset(&mut self) {
+        self.reset_phase();
     }
 
     fn reset_phase(&mut self) {
@@ -116,6 +131,10 @@ impl<'a> Oscillator<'a> {
         self.amp_mod = value;
     }
 
+    pub fn get_base_frequency(&self) -> f64 {
+        self.base_frequency
+    }
+    
     pub fn set_base_frequency(&mut self, freq: f64) {
         self.base_frequency = freq;
         self.update_frequency();
