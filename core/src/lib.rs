@@ -1,8 +1,8 @@
 //!
-//! HeroSynth library
+//! HeroSynth core library
 //!
 
-//mod consts;
+pub mod types;
 
 pub mod wavetable;
 
@@ -12,8 +12,4 @@ pub mod filter;
 
 pub mod panning;
 
-pub mod patch;
-
-pub mod voice;
-
-pub mod synth;
+pub mod processing;

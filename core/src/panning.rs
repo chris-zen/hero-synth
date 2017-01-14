@@ -4,14 +4,14 @@
 
 use wavetable::{self, Wavetable};
 
-pub struct Panning<'a> {
+pub struct Panning {
     left: f64,
     right: f64,
     value: f64,
-    wavetable: Wavetable<'a>
+    wavetable: Wavetable
 }
 
-impl<'a> Default for Panning<'a> {
+impl Default for Panning {
     fn default() -> Self {
         Panning {
             left: 0.5,
@@ -22,8 +22,8 @@ impl<'a> Default for Panning<'a> {
     }
 }
 
-impl<'a> Panning<'a> {
-    pub fn new(value: f64) -> Panning<'a> {
+impl Panning {
+    pub fn new(value: f64) -> Panning {
         let mut p = Panning::default();
         p.set_value(value);
         p

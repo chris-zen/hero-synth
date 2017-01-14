@@ -1,9 +1,10 @@
 use std::rc::Rc;
 
-use oscillator::Oscillator;
-use panning::Panning;
-use filter::Filter;
-use filter::iir::IIR;
+use hero_core::oscillator::Oscillator;
+use hero_core::panning::Panning;
+use hero_core::filter::Filter;
+use hero_core::filter::iir::IIR;
+
 use patch::Patch;
 
 const MAX_OSCILLATORS: usize = 8;
@@ -12,23 +13,23 @@ const MAX_FILTERS: usize = 2;
 /// Modulation index for Frequency Modulation
 const MOD_INDEX: f64 = 6.0;
 
-struct Voice<'a> {
+struct Voice {
     patch: Rc<Patch>,
     sample_rate: f64,
-    oscillators: Vec<Oscillator<'a>>,
-    osc_panning: Vec<Panning<'a>>,
+    oscillators: Vec<Oscillator>,
+    osc_panning: Vec<Panning>,
     filters: Vec<Box<Filter>>,
-    filt_panning: Vec<Panning<'a>>,
+    filt_panning: Vec<Panning>,
     freq: f64,
     amplitude: f64,
 }
 
-impl<'a> Voice<'a> {
-    pub fn new(sample_rate: f64, patch: Rc<Patch>) -> Voice<'a> {
+impl Voice {
+    pub fn new(sample_rate: f64, patch: Rc<Patch>) -> Voice {
         let mut oscillators = Vec::with_capacity(MAX_OSCILLATORS);
         let mut osc_panning = Vec::with_capacity(MAX_OSCILLATORS);
         for osc_def in patch.oscillators.iter().take(MAX_OSCILLATORS) {
-            let osc = Oscillator::from_patch_def(sample_rate, osc_def);
+            let osc = osc_def.into_oscillator(sample_rate);
             oscillators.push(osc);
             let pan = Panning::new(osc_def.panning);
             osc_panning.push(pan);
@@ -87,7 +88,7 @@ impl<'a> Voice<'a> {
 
         let num_osc = self.oscillators.len();
 
-        // Calculate oscillators' signals and send modulation
+        // Calculate oscillators' signals and send AM and FM modulation
 
         for i in 0..num_osc {
             let osc = &mut self.oscillators[i];
@@ -128,8 +129,8 @@ impl<'a> Voice<'a> {
 
         // Normalize output
 
-        let count = 1.0 / count as f64;
+        let inv_count = 1.0 / count as f64;
 
-        (left * count, right * count)
+        (left * inv_count, right * inv_count)
     }
 }

@@ -1,0 +1,7 @@
+[package]
+name = "hero_wfgen"
+version = "0.1.0"
+authors = ["Christian Perez-Llamas"]
+
+[dependencies]
+docopt = "0.7.0"

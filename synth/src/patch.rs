@@ -3,12 +3,17 @@
 //use std::fs::File;
 //use std::path::Path;
 
+use hero_core::wavetable::{self, Wavetable};
+use hero_core::oscillator::Oscillator;
+use hero_core::types::SampleRate;
+
+
 pub struct SendLevel {
     pub index: usize,
     pub level: f64
 }
 
-pub struct Osc {
+pub struct OscPatch {
     pub is_enabled: bool,
     pub wavetable: String,
     pub initial_phase: f64,
@@ -27,7 +32,49 @@ pub struct Osc {
     pub level: f64,                // Mix level
 }
 
-pub struct Filter {
+impl Default for OscPatch {
+    fn default() -> Self {
+        OscPatch {
+            is_enabled: true,
+            wavetable: "sin".to_string(),
+            initial_phase: 0.0,
+            amplitude: 1.0,
+            is_fixed_freq: false,
+            base_frequency: 440.0,
+            octaves: 0,
+            semitones: 0,
+            detune: 0.0,
+
+            am_send: Vec::new(),
+            fm_send: Vec::new(),
+            filt_send: Vec::new(),
+
+            panning: 0.0,
+            level: 1.0
+        }
+    }
+}
+
+impl OscPatch {
+    pub fn into_oscillator(&self, sample_rate: SampleRate) -> Oscillator {
+        let wt_stock = match wavetable::Stock::from_name(&self.wavetable) {
+            Some(stock) => stock,
+            None => wavetable::Stock::Sin,
+        };
+        let wavetable = Wavetable::from_stock(wt_stock);
+
+        let mut o = Oscillator::new(sample_rate, wavetable, self.base_frequency);
+        o.set_enabled(self.is_enabled);
+        o.set_amplitude(self.amplitude);
+        o.set_fixed_freq(self.is_fixed_freq);
+        o.set_octaves(self.octaves);
+        o.set_semitones(self.semitones);
+        o.set_detune(self.detune);
+        o
+    }
+}
+
+pub struct FilterPatch {
     // TODO filter params
     pub mode: String,
     pub slope: String,
@@ -43,8 +90,19 @@ pub struct Filter {
 }
 
 pub struct Patch {
-    pub oscillators: Vec<Osc>,
-    pub filters: Vec<Filter>,
+    pub oscillators: Vec<OscPatch>,
+    pub filters: Vec<FilterPatch>,
+}
+
+impl Default for Patch {
+    fn default() -> Self {
+        let osc1 = OscPatch::default();
+
+        Patch {
+            oscillators: vec![osc1],
+            filters: Vec::new()
+        }
+    }
 }
 
 /*

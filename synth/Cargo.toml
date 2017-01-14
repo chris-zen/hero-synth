@@ -1,0 +1,7 @@
+[package]
+name = "hero_synth"
+version = "0.1.0"
+authors = ["Christian Perez-Llamas"]
+
+[dependencies]
+hero_core = { path = "../core" }

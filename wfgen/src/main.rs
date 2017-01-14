@@ -17,6 +17,6 @@ fn main() {
 
     let base_path = args.get_str("<output>");
 
-    wfgen::gen_lut(base_path, "sin",
-                   &mut wfgen::sin::SinGen::new(wfgen::DEFAULT_WAVETABLE_SIZE)).unwrap();
+    let mut sin_gen = wfgen::sin::SinGen::new(wfgen::DEFAULT_WAVETABLE_SIZE);
+    wfgen::gen_lut(base_path, "sin", &mut sin_gen).unwrap();
 }

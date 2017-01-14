@@ -1,12 +1,12 @@
 use std::f64::consts::PI;
 
-use wavetable::{self, Wavetable};
-use patch;
+use wavetable::Wavetable;
 
-pub struct Oscillator<'a> {
+#[derive(Clone)]
+pub struct Oscillator {
     is_enabled: bool,
 
-    wavetable: Wavetable<'a>,
+    wavetable: Wavetable,
     freq_to_table_incr: f64,
     table_incr: f64,
     initial_phase: f64,
@@ -24,7 +24,7 @@ pub struct Oscillator<'a> {
     phase_mod: f64,         // Phase modulation calculated from frequency and freq_mod
 }
 
-impl<'a> Default for Oscillator<'a> {
+impl Default for Oscillator {
     fn default() -> Self {
         Oscillator {
             is_enabled: true,
@@ -46,8 +46,8 @@ impl<'a> Default for Oscillator<'a> {
     }
 }
 
-impl<'a> Oscillator<'a> {
-    pub fn new(sample_rate: f64, wavetable: Wavetable<'a>, freq: f64) -> Oscillator<'a> {
+impl Oscillator {
+    pub fn new(sample_rate: f64, wavetable: Wavetable, freq: f64) -> Oscillator {
         let wt_size = wavetable.size() as f64;
         let mut o = Oscillator {
             wavetable: wavetable,
@@ -59,7 +59,7 @@ impl<'a> Oscillator<'a> {
         o
     }
 
-    pub fn from_sample_rate(sample_rate: f64) -> Oscillator<'a> {
+    pub fn from_sample_rate(sample_rate: f64) -> Oscillator {
         let mut o = Oscillator::default();
         let wt_size = o.wavetable.size() as f64;
         o.freq_to_table_incr = wt_size / sample_rate;
@@ -67,34 +67,11 @@ impl<'a> Oscillator<'a> {
         o
     }
 
-    pub fn from_wavetable(sample_rate: f64, wavetable: Wavetable<'a>) -> Oscillator<'a> {
+    pub fn from_wavetable(sample_rate: f64, wavetable: Wavetable) -> Oscillator {
         let wt_size = wavetable.size() as f64;
         let mut o = Oscillator {
             wavetable: wavetable,
             freq_to_table_incr: wt_size / sample_rate,
-            ..Default::default()
-        };
-        o.init();
-        o
-    }
-
-    pub fn from_patch_def(sample_rate: f64, osc_desc: &patch::Osc) -> Oscillator<'a> {
-        let wt_stock = match wavetable::Stock::from_name(&osc_desc.wavetable) {
-            Some(stock) => stock,
-            None => wavetable::Stock::Sin,
-        };
-        let wavetable = Wavetable::from_stock(wt_stock);
-        let wt_size = wavetable.size() as f64;
-        let mut o = Oscillator {
-            is_enabled: osc_desc.is_enabled,
-            wavetable: wavetable,
-            freq_to_table_incr: wt_size / sample_rate,
-            amplitude: osc_desc.amplitude,
-            is_fixed_freq: osc_desc.is_fixed_freq,
-            base_frequency: osc_desc.base_frequency,
-            octaves: osc_desc.octaves,
-            semitones: osc_desc.semitones,
-            detune: osc_desc.detune,
             ..Default::default()
         };
         o.init();
@@ -123,6 +100,49 @@ impl<'a> Oscillator<'a> {
         self.table_incr = self.frequency * self.freq_to_table_incr;
     }
 
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.is_enabled = enabled;
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.is_enabled
+    }
+
+    pub fn set_fixed_freq(&mut self, fixed_freq: bool) {
+        self.is_fixed_freq = fixed_freq;
+    }
+
+    pub fn is_fixed_freq(&self) -> bool {
+        self.is_fixed_freq
+    }
+
+    pub fn set_octaves(&mut self, octaves: i32) {
+        self.octaves = octaves;
+        self.update_frequency();
+    }
+
+    pub fn get_octaves(&self) -> i32 {
+        self.octaves
+    }
+
+    pub fn set_semitones(&mut self, semitones: i32) {
+        self.semitones = semitones;
+        self.update_frequency();
+    }
+
+    pub fn get_semitones(&self) -> i32 {
+        self.semitones
+    }
+
+    pub fn set_detune(&mut self, detune: f64) {
+        self.detune = detune;
+        self.update_frequency();
+    }
+
+    pub fn get_detune(&self) -> f64 {
+        self.detune
+    }
+
     pub fn set_amplitude(&mut self, value: f64) {
         self.amplitude = value;
     }
@@ -131,13 +151,13 @@ impl<'a> Oscillator<'a> {
         self.amp_mod = value;
     }
 
-    pub fn get_base_frequency(&self) -> f64 {
-        self.base_frequency
-    }
-    
     pub fn set_base_frequency(&mut self, freq: f64) {
         self.base_frequency = freq;
         self.update_frequency();
+    }
+
+    pub fn get_base_frequency(&self) -> f64 {
+        self.base_frequency
     }
 
     pub fn set_freq_modulation(&mut self, value: f64) {

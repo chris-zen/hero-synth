@@ -1,0 +1,14 @@
+[package]
+name = "hero_core"
+version = "0.1.0"
+authors = ["Christian Perez-Llamas"]
+build = "build.rs"
+
+[build-dependencies.hero_wfgen]
+path = "../wfgen"
+
+[dependencies]
+
+[lib]
+name = "hero_core"
+path = "src/lib.rs"

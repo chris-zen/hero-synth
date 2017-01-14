@@ -1,4 +1,7 @@
 
+mod sin;
+mod saw;
+
 pub enum Stock {
     Sin = 0,
     Saw,
@@ -14,27 +17,31 @@ impl Stock {
     }
 }
 
-pub struct Wavetable<'a> {
-    data: &'a [f64],
+pub struct Wavetable {
+    data: Vec<f64>,
 }
 
-impl<'a> Default for Wavetable<'a> {
+impl Clone for Wavetable {
+    fn clone(&self) -> Self { Wavetable { data: self.data.clone() } }
+}
+
+impl Default for Wavetable {
     fn default() -> Self {
-        Wavetable {data: sin::LUT}
+        Wavetable { data: sin::LUT.to_vec() }
     }
 }
 
-impl<'a> Wavetable<'a> {
-    pub fn new(data: &'a [f64]) -> Wavetable<'a> {
+impl Wavetable {
+    pub fn new(data: Vec<f64>) -> Wavetable {
         Wavetable {
             data: data
         }
     }
 
-    pub fn from_stock(stock: Stock) -> Wavetable<'a> {
+    pub fn from_stock(stock: Stock) -> Wavetable {
         match stock {
-            Stock::Sin => Wavetable {data: sin::LUT},
-            Stock::Saw => Wavetable {data: saw::LUT},
+            Stock::Sin => Wavetable { data: sin::LUT.to_vec() },
+            Stock::Saw => Wavetable { data: saw::LUT.to_vec() },
         }
     }
 
@@ -56,6 +63,3 @@ impl<'a> Wavetable<'a> {
         return value + diff * fraction;
     }
 }
-
-pub mod sin;
-pub mod saw;

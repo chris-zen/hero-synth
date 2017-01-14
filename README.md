@@ -1,7 +1,13 @@
 # hero-synth
 
-The goal of this project is to create an audio synthesizer that is able to model Additive, Substractive and FM synthesis all in one. The idea is to add some basic units such as oscilators, LFOs, evelopes, filters and effects, and allow the user to route them using a kind of [matrix mixer](http://en.wikipedia.org/wiki/Matrix_mixer).
+The end goal of this project is to experiment with different technologies around music creation.
 
-Before you continue looking at it, please bear in mind that my main motivation with this project is to learn the Rust language.
+The initial plan is to create an audio synthesizer that is able to model Additive, Substractive and FM synthesis all in one. The idea is to add some basic units such as oscilators, LFOs, evelopes, filters and effects, and allow the user to route them using a kind of [matrix mixer](http://en.wikipedia.org/wiki/Matrix_mixer).
 
-Some ideas for the future are to work on an Audio Unit/VST interface so it can be used with music studios such as Garage Band or Cubase.
+I also plan to experiment with MIDI interfaces to control the system. But more of that later on ...
+
+These are the sub-projects right now:
+- core: core components to build synths and audio effects
+- synth: the matrix synth implementation
+- host: The audio/MIDI system that hosts the synth.
+- wfgen: An utility to build wavetable data as code, used by the core wavetable component.
