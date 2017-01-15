@@ -137,6 +137,7 @@ impl Coeffs {
     }
 }
 
+#[derive(Debug)]
 pub struct IIR {
     mode: Mode,
     slope: Slope,

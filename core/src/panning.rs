@@ -4,6 +4,7 @@
 
 use wavetable::{self, Wavetable};
 
+#[derive(Debug)]
 pub struct Panning {
     left: f64,
     right: f64,

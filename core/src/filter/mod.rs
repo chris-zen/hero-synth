@@ -1,3 +1,5 @@
+
+#[derive(Debug)]
 pub enum Mode {
     ByPass = 0,
     LowPass,
@@ -6,6 +8,7 @@ pub enum Mode {
     BandStop
 }
 
+#[derive(Debug)]
 pub enum Slope {
     Slope12 = 0,
     Slope24

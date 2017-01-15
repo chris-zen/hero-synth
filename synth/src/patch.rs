@@ -8,11 +8,23 @@ use hero_core::oscillator::Oscillator;
 use hero_core::types::SampleRate;
 
 
+#[derive(Clone, Debug)]
 pub struct SendLevel {
     pub index: usize,
     pub level: f64
 }
 
+impl SendLevel {
+    pub fn new(index: usize, level: f64) -> SendLevel {
+        SendLevel { index: index, level: level }
+    }
+
+    pub fn from_index(index: usize) -> SendLevel {
+        SendLevel { index: index, level: 1.0 }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct OscPatch {
     pub is_enabled: bool,
     pub wavetable: String,
@@ -56,7 +68,7 @@ impl Default for OscPatch {
 }
 
 impl OscPatch {
-    pub fn into_oscillator(&self, sample_rate: SampleRate) -> Oscillator {
+    pub fn to_oscillator(&self, sample_rate: SampleRate) -> Oscillator {
         let wt_stock = match wavetable::Stock::from_name(&self.wavetable) {
             Some(stock) => stock,
             None => wavetable::Stock::Sin,
@@ -74,6 +86,7 @@ impl OscPatch {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct FilterPatch {
     // TODO filter params
     pub mode: String,
@@ -89,6 +102,7 @@ pub struct FilterPatch {
     pub level: f64,                // Mix level
 }
 
+#[derive(Clone, Debug)]
 pub struct Patch {
     pub oscillators: Vec<OscPatch>,
     pub filters: Vec<FilterPatch>,
@@ -96,10 +110,25 @@ pub struct Patch {
 
 impl Default for Patch {
     fn default() -> Self {
-        let osc1 = OscPatch::default();
+        let mut o0 = OscPatch::default();
+        let mut o1 = OscPatch::default();
+        let mut o2 = OscPatch::default();
+        // o0.base_frequency = 220.0;
+        // o0.amplitude = 1.0;
+        o1.level = 0.0;
+        o1.is_fixed_freq = true;
+        o1.base_frequency = 1.0 / 4.0;
+        o1.amplitude = 16.0 * o1.base_frequency;
+        o2.level = 0.0;
+        o2.is_fixed_freq = true;
+        o2.base_frequency = 2.0;
+        o2.amplitude = 16.0 * o2.base_frequency;
+
+        o1.fm_send.push(SendLevel::from_index(2));
+        o2.fm_send.push(SendLevel::from_index(0));
 
         Patch {
-            oscillators: vec![osc1],
+            oscillators: vec![o0, o1, o2],
             filters: Vec::new()
         }
     }

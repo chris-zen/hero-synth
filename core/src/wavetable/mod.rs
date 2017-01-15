@@ -1,6 +1,7 @@
-
 mod sin;
 mod saw;
+
+use std::fmt;
 
 pub enum Stock {
     Sin = 0,
@@ -19,6 +20,12 @@ impl Stock {
 
 pub struct Wavetable {
     data: Vec<f64>,
+}
+
+impl fmt::Debug for Wavetable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Wavetable({})", self.data.len())
+    }
 }
 
 impl Clone for Wavetable {

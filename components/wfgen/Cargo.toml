@@ -1,0 +1,7 @@
+[package]
+name = "wfgen"
+version = "0.1.0"
+authors = ["Christian Perez-Llamas <cllamas@tripadvisor.com>"]
+
+[dependencies]
+docopt = "0.6.67"

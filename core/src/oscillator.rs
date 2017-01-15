@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use wavetable::Wavetable;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Oscillator {
     is_enabled: bool,
 
