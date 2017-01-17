@@ -1,84 +1,38 @@
-//extern crate rand;
-//use rand::Rng;
-
 extern crate portaudio;
+extern crate portmidi;
 // extern crate coremidi;
 
 extern crate hero_core;
 extern crate hero_synth;
 
-mod buffers;
 mod host;
+mod buffers;
+mod audio;
+mod midi;
 
 use std::sync::{Arc, Mutex};
 
-use hero_core::types::SampleRate;
-use hero_core::processing::{ProcessingArgs, Processor};
-
-use buffers::DeinterlacedOutputBuffers;
-
-const SAMPLE_RATE: SampleRate = 44100 as SampleRate;
-const INTERLEAVED: bool = true;
-const CHANNELS: u32 = 2;
-const FRAMES: u32 = 256;
+use audio::{SAMPLE_RATE, audio_start, audio_close};
+use midi::midi_start;
 
 fn main() {
 
-    let host = host::Host::new(SAMPLE_RATE).unwrap();
+    let host = Arc::new(Mutex::new(host::Host::new(SAMPLE_RATE).unwrap()));
 
-    run(host).unwrap();
+    let pa_ctx = portaudio::PortAudio::new().unwrap();
 
-    println!("");
-}
+    let pm_ctx = portmidi::PortMidi::new().unwrap();
 
-fn run<'a>(host: host::Host) -> Result<(), portaudio::error::Error> {
+    let mut stream = audio_start(&pa_ctx, host.clone()).unwrap();
 
-    let sample_rate = SAMPLE_RATE;
-
-    let pa_ctx = try!(portaudio::PortAudio::new());
-
-    let default_output = try!(pa_ctx.default_output_device());
-    let output_info = try!(pa_ctx.device_info(default_output));
-
-    // Construct the output stream parameters.
-    let latency = output_info.default_low_output_latency;
-    let output_params = portaudio::StreamParameters::<f32>::new(
-        default_output, CHANNELS as i32, INTERLEAVED, latency);
-
-    // Check that the stream format is supported.
-    try!(pa_ctx.is_output_format_supported(output_params, sample_rate));
-
-    // Construct the settings with which we'll open our stream.
-    let settings = portaudio::OutputStreamSettings::new(
-        output_params, sample_rate, FRAMES);
-
-    let host = Arc::new(Mutex::new(host));
-
-    let callback = move |portaudio::OutputStreamCallbackArgs { buffer, frames, time, .. }| {
-
-        let _ = time; // TODO handle time
-
-        let mut deinterlaced = DeinterlacedOutputBuffers::from(buffer);
-        let args = ProcessingArgs::new(frames, &mut deinterlaced.left, &mut deinterlaced.right);
-
-        let mut locked_host = host.lock().unwrap(); // TODO What if it fails ?
-        locked_host.process(args);
-
-        portaudio::Continue
-    };
-
-    // Construct a stream with input and output sample types of f32.
-    let mut stream = try!(pa_ctx.open_non_blocking_stream(settings, callback));
-    try!(stream.start());
+    midi_start(&pm_ctx, host.clone()).unwrap();
 
     // Loop while the non-blocking stream is active.
     while let Ok(true) = stream.is_active() {
         pa_ctx.sleep(1000);
     }
 
-    println!("Stopping and closing the stream ...");
-    try!(stream.stop());
-    try!(stream.close());
+    audio_close(&mut stream).unwrap();
 
-    Ok(())
+    println!("");
 }

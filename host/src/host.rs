@@ -1,5 +1,5 @@
-use hero_core::oscillator::Oscillator;
-use hero_core::wavetable::{self, Wavetable};
+// use hero_core::oscillator::Oscillator;
+// use hero_core::wavetable::{self, Wavetable};
 use hero_core::types::{SampleRate, Tempo, DEFAULT_TEMPO};
 use hero_core::processing::{AudioOutputBuffer, ProcessingArgs, Processor};
 use hero_synth::synth::Synth as HeroSynth;
@@ -58,7 +58,7 @@ impl Host {
     pub fn new(sample_rate: SampleRate) -> Result<Host, String> {
         let mut hero_synth = HeroSynth::new(sample_rate);
         hero_synth.note_on(33, 1.0);
-        hero_synth.note_on(93, 0.5);
+        hero_synth.note_on(81, 0.5);
 
         Ok(Host {
             sample_rate: sample_rate,

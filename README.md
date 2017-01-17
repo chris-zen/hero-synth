@@ -11,3 +11,10 @@ These are the sub-projects right now:
 - synth: the matrix synth implementation
 - host: The audio/MIDI system that hosts the synth.
 - wfgen: An utility to build wavetable data as code, used by the core wavetable component.
+
+To run the host:
+
+```bash
+cd host
+cargo run --release
+```
