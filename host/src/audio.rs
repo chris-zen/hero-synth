@@ -1,6 +1,6 @@
-use portaudio;
-
 use std::sync::{Arc, Mutex};
+
+use portaudio;
 
 use hero_core::types::SampleRate;
 use hero_core::processing::{ProcessingArgs, Processor};

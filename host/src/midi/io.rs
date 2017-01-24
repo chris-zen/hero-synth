@@ -5,6 +5,7 @@ use std::thread;
 use portmidi;
 
 use host::Host;
+use midi::Decoder;
 
 const MIDI_BUF_LEN: usize = 1024;
 const MIDI_LOOP_DELAY_MILLIS: u64 = 10;
