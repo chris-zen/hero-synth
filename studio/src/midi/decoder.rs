@@ -1,12 +1,10 @@
-use midi::types::{u4, u7};
+use midi::types::{U4, U7};
 use midi::messages::Message;
-
-const END_OF_SYSEX: u8 = 0b11110111;
 
 pub struct Decoder<'a> {
     pos: usize,
     start: usize,
-    sysex_data: Vec<u7>,
+    sysex_data: Vec<U7>,
     sysex_decoding: bool,
     data: &'a [u8],
 }
@@ -20,7 +18,7 @@ impl<'a> Decoder<'a> {
         Message::Unknown(self.data[self.start .. end].to_vec())
     }
 
-    fn next_data(&mut self) -> Result<u7, usize> {
+    fn next_data(&mut self) -> Result<U7, usize> {
         if self.pos < self.data.len() {
             let d1 = self.data[self.pos];
             if d1 & 0b10000000 == 0 {
@@ -36,11 +34,11 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    fn next_data2(&mut self) -> Result<(u7, u7), usize> {
+    fn next_data2(&mut self) -> Result<(U7, U7), usize> {
         self.next_data().and_then(|d1| self.next_data().and_then(|d2| Ok((d1, d2))))
     }
 
-    fn decode_note(&mut self, channel: u4, is_on: bool) -> Message {
+    fn decode_note(&mut self, channel: U4, is_on: bool) -> Message {
         match self.next_data2() {
             Ok((key, velocity)) => match is_on {
                 true => Message::NoteOn { channel: channel, key: key, velocity: velocity },
@@ -50,14 +48,14 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    fn decode_polyphonic_key_pressure(&mut self, channel: u4) -> Message {
+    fn decode_polyphonic_key_pressure(&mut self, channel: U4) -> Message {
         match self.next_data2() {
-            Ok((key, pressure)) => Message::PolyphonicKeyPressure { channel: channel, key: key, pressure: pressure },
+            Ok((key, pressure)) => Message::PolyphonicKeyPressure { channel: channel, key: key, value: pressure },
             Err(end) => self.unknown(end)
         }
     }
 
-    fn decode_control_change(&mut self, channel: u4) -> Message {
+    fn decode_control_change(&mut self, channel: U4) -> Message {
         match self.next_data2() {
             Ok((controller, value)) => match controller {
                 120 => match value {
@@ -89,6 +87,27 @@ impl<'a> Decoder<'a> {
                 },
                 _ => Message::ControlChange { channel: channel, controller: controller, value: value }
             },
+            Err(end) => self.unknown(end)
+        }
+    }
+
+    fn decode_program_change(&mut self, channel: U4) -> Message {
+        match self.next_data() {
+            Ok(program) => Message::ProgramChange { channel: channel, value: program },
+            Err(end) => self.unknown(end)
+        }
+    }
+
+    fn decode_channel_pressure(&mut self, channel: U4) -> Message {
+        match self.next_data() {
+            Ok(pressure) => Message::ChannelPressure { channel: channel, value: pressure },
+            Err(end) => self.unknown(end)
+        }
+    }
+
+    fn decode_pitch_bend(&mut self, channel: U4) -> Message {
+        match self.next_data2() {
+            Ok((lsb, msb)) => Message::PitchBend { channel: channel, value: (msb << 7) | lsb },
             Err(end) => self.unknown(end)
         }
     }
@@ -158,12 +177,15 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    fn decode(&mut self, status: u7) -> Option<Message> {
+    fn decode(&mut self, status: U7) -> Option<Message> {
         match (status >> 4) & 0x0f {
             0b1000 => Some(self.decode_note(status & 0x0f, false)),
             0b1001 => Some(self.decode_note(status & 0x0f, true)),
             0b1010 => Some(self.decode_polyphonic_key_pressure(status & 0x0f)),
             0b1011 => Some(self.decode_control_change(status & 0x0f)),
+            0b1100 => Some(self.decode_program_change(status & 0x0f)),
+            0b1101 => Some(self.decode_channel_pressure(status & 0x0f)),
+            0b1110 => Some(self.decode_pitch_bend(status & 0x0f)),
             0b1111 => match status & 0x0f {
                 0b0000 => self.decode_sysex_start(),
                 0b0001 => Some(self.decode_mtc_quarter_frame()),
@@ -244,7 +266,7 @@ mod tests {
     fn decode_polyphonic_key_pressure() {
         let data = &vec![0b1010_0101u8, 64, 127];
         let mut dec = Decoder::new(data);
-        assert_eq!(dec.next(), Some(Message::PolyphonicKeyPressure { channel: 0b0101, key: 64, pressure: 127 }));
+        assert_eq!(dec.next(), Some(Message::PolyphonicKeyPressure { channel: 0b0101, key: 64, value: 127 }));
         assert_eq!(dec.next(), None);
     }
 
@@ -253,6 +275,30 @@ mod tests {
         let data = &vec![0b1011_0101u8, 64, 127];
         let mut dec = Decoder::new(data);
         assert_eq!(dec.next(), Some(Message::ControlChange { channel: 0b0101, controller: 64, value: 127 }));
+        assert_eq!(dec.next(), None);
+    }
+
+    #[test]
+    fn decode_program_change() {
+        let data = &vec![0b1100_0101u8, 0b0_1010101];
+        let mut dec = Decoder::new(data);
+        assert_eq!(dec.next(), Some(Message::ProgramChange { channel: 0b0101, value: 0b0_1010101 }));
+        assert_eq!(dec.next(), None);
+    }
+
+    #[test]
+    fn decode_channel_pressure() {
+        let data = &vec![0b1101_0101u8, 0b0_1010101];
+        let mut dec = Decoder::new(data);
+        assert_eq!(dec.next(), Some(Message::ChannelPressure { channel: 0b0101, value: 0b0_1010101 }));
+        assert_eq!(dec.next(), None);
+    }
+
+    #[test]
+    fn decode_pitch_bend() {
+        let data = &vec![0b1110_0101u8, 0b0_1010101, 0b0_0101010];
+        let mut dec = Decoder::new(data);
+        assert_eq!(dec.next(), Some(Message::PitchBend { channel: 0b0101, value: 0b0_1010101 }));
         assert_eq!(dec.next(), None);
     }
 

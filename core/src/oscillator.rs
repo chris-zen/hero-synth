@@ -92,7 +92,7 @@ impl Oscillator {
     }
 
     fn update_frequency(&mut self) {
-        let pitch_scale = (2.0f64).powf(((((self.octaves * 1200 + self.semitones) * 100) as f64) + self.detune) / 1200.0);
+        let pitch_scale = (2.0f64).powf((((self.octaves * 1200 + self.semitones * 100) as f64) + self.detune) / 1200.0);
         self.frequency = self.base_frequency * pitch_scale;
         if self.frequency < 0.0 {
             self.frequency = 0.0;

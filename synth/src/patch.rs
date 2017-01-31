@@ -110,25 +110,47 @@ pub struct Patch {
 
 impl Default for Patch {
     fn default() -> Self {
-        let mut o0 = OscPatch::default();
+        const O1: usize = 0;
+        const O2: usize = 0;
+        const O3: usize = 0;
+        const O4: usize = 0;
         let mut o1 = OscPatch::default();
         let mut o2 = OscPatch::default();
-        // o0.base_frequency = 220.0;
-        // o0.amplitude = 1.0;
-        o1.level = 0.0;
-        o1.is_fixed_freq = true;
-        o1.base_frequency = 1.0 / 4.0;
-        o1.amplitude = 16.0 * o1.base_frequency;
-        o2.level = 0.0;
-        o2.is_fixed_freq = true;
-        o2.base_frequency = 2.0;
-        o2.amplitude = 16.0 * o2.base_frequency;
+        let mut o3 = OscPatch::default();
+        let mut o4 = OscPatch::default();
+        o1.level = 1.0;
+        // o1.is_fixed_freq = true;
+        // o1.base_frequency = 1.0 / 4.0;
+        // o1.detune = 0.75;
+        // o1.amplitude = 16.0 * o1.base_frequency;
 
-        o1.fm_send.push(SendLevel::from_index(2));
-        o2.fm_send.push(SendLevel::from_index(0));
+        o2.level = 0.0;
+        // o2.is_fixed_freq = true;
+        // o2.base_frequency = 2.0;
+        // o2.detune = 0.0;
+        // o2.amplitude = 16.0 * o2.base_frequency;
+
+        o3.level = 0.0;
+        // o3.is_fixed_freq = true;
+        // o3.base_frequency = 2.0;
+        o3.octaves = 4;
+        // o3.detune = 0.16;
+        // o3.amplitude = 16.0 * o2.base_frequency;
+
+        o4.level = -1.0;
+        // o3.is_fixed_freq = true;
+        // o3.base_frequency = 2.0;
+        o4.semitones = 8;
+        // o3.detune = 0.16;
+        // o3.amplitude = 16.0 * o2.base_frequency;
+
+        o3.fm_send.push(SendLevel::new(O1, 0.70));
+        // o1.fm_send.push(SendLevel::new(0, 0.62));
+        // o1.fm_send.push(SendLevel::new(0, 0.62));
+        // o1.fm_send.push(SendLevel::new(0, 0.62));
 
         Patch {
-            oscillators: vec![o0, o1, o2],
+            oscillators: vec![o1, o2, o3, o4],
             filters: Vec::new()
         }
     }

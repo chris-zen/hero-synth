@@ -106,6 +106,10 @@ impl Voice {
         self.amplitude = vel;
     }
 
+    pub fn note_off(&mut self, _vel: f64) {
+        self.amplitude = 0.0;
+    }
+
     pub fn process(&mut self) -> (f64, f64) {
         let mut osc_signals = [0.0f64; MAX_OSCILLATORS];
         let mut osc_amp_mod = [1.0f64; MAX_OSCILLATORS];

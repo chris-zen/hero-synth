@@ -1,21 +1,28 @@
+mod buffers;
+pub mod processing;
+pub mod types;
+
+pub use self::types::Timestamp;
+
 use std::sync::{Arc, Mutex};
 
 use portaudio;
 
 use hero_core::types::SampleRate;
-use hero_core::processing::{ProcessingArgs, Processor};
 
-use buffers::DeinterlacedOutputBuffers;
-use host::Host;
+use engine::Engine;
+
+use self::processing::{ProcessingArgs, Processor};
+use self::buffers::DeinterlacedOutputBuffers;
 
 type PortAudioStream = portaudio::Stream<portaudio::NonBlocking, portaudio::Output<f32>>;
 
 pub const SAMPLE_RATE: SampleRate = 44100 as SampleRate;
 const INTERLEAVED: bool = true;
 const CHANNELS: u32 = 2;
-const FRAMES: u32 = 256;
+const FRAMES: u32 = 400;
 
-pub fn audio_start<'a>(pa_ctx: &'a portaudio::PortAudio, host: Arc<Mutex<Host>>) -> Result<PortAudioStream, portaudio::error::Error> {
+pub fn audio_start<'a>(pa_ctx: &'a portaudio::PortAudio, engine: Arc<Mutex<Engine>>) -> Result<PortAudioStream, portaudio::error::Error> {
 
     let sample_rate = SAMPLE_RATE;
 
@@ -38,13 +45,12 @@ pub fn audio_start<'a>(pa_ctx: &'a portaudio::PortAudio, host: Arc<Mutex<Host>>)
 
     let callback = move |portaudio::OutputStreamCallbackArgs { buffer, frames, time, .. }| {
 
-        let _ = time; // TODO handle time
-
+        let timestamp = (time.buffer_dac * 1000000000.0) as Timestamp;
         let mut deinterlaced = DeinterlacedOutputBuffers::from(buffer);
-        let args = ProcessingArgs::new(frames, &mut deinterlaced.left, &mut deinterlaced.right);
+        let args = ProcessingArgs::new(timestamp, frames, &mut deinterlaced.left, &mut deinterlaced.right);
 
-        let mut locked_host = host.lock().unwrap(); // TODO What if it fails ?
-        locked_host.process(args);
+        let mut locked_engine = engine.lock().unwrap(); // TODO What if it fails ?
+        locked_engine.process(args);
 
         portaudio::Continue
     };

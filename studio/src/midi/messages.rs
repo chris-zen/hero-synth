@@ -1,70 +1,70 @@
-use midi::types::{u3, u4, u7, u14};
+use midi::types::{U3, U4, U7, U14};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Message {
     // --- Channel Voice Messages [nnnn = 0-15 (MIDI Channel Number 1-16)]
 
     /// This message is sent when a note is released (ended).
-    NoteOff { channel: u4, key: u7, velocity: u7 },
+    NoteOff { channel: U4, key: U7, velocity: U7 },
 
     /// This message is sent when a note is depressed (start).
-    NoteOn { channel: u4, key: u7, velocity: u7 },
+    NoteOn { channel: U4, key: U7, velocity: U7 },
 
     /// This message is most often sent by pressing down on the key after it "bottoms out".
-    PolyphonicKeyPressure { channel: u4, key: u7, pressure: u7 },
+    PolyphonicKeyPressure { channel: U4, key: U7, value: U7 },
 
     /// This message is sent when a controller value changes.
-    ControlChange { channel: u4, controller: u7, value: u7 },
+    ControlChange { channel: U4, controller: U7, value: U7 },
 
     /// This message sent when the patch number changes.
-    ProgramChange { channel: u4, program: u7 },
+    ProgramChange { channel: U4, value: U7 },
 
     /// This message is most often sent by pressing down on the key after it "bottoms out".
     /// Use this message to send the single greatest pressure value (of all the current depressed keys).
-    ChannelPressure { channel: u4, program: u7 },
+    ChannelPressure { channel: U4, value: U7 },
 
     /// Pitch Bend Change. This message is sent to indicate a change in the pitch bender
     /// (wheel or lever, typically). The pitch bender is measured by a fourteen bit value. Center
     /// (no pitch change) is 2000H.
-    PitchBend { channel: u4, value: u14 },
+    PitchBend { channel: U4, value: U14 },
 
     // --- Channel Mode Messages
 
     /// When All Sound Off is received all oscillators will turn off, and their
     /// volume envelopes are set to zero as soon as possible.
-    AllSoundOff { channel: u4 },
+    AllSoundOff { channel: U4 },
 
     /// When Reset All Controllers is received, all controller values are reset to their default values.
-    ResetAllControllers { channel: u4 },
+    ResetAllControllers { channel: U4 },
 
     /// When Local Control is Off, all devices on a given channel will respond only to data
     /// received over MIDI. Played data, etc. will be ignored.
-    LocalControlOff { channel: u4 },
+    LocalControlOff { channel: U4 },
 
     /// Local Control On restores the functions of the normal controllers.
-    LocalControlOn { channel: u4 },
+    LocalControlOn { channel: U4 },
 
     /// When an All Notes Off is received, all oscillators will turn off.
-    AllNotesOff { channel: u4 },
+    AllNotesOff { channel: U4 },
 
     /// It also causes all notes off.
-    OmniModeOff { channel: u4 },
+    OmniModeOff { channel: U4 },
 
     /// It also causes all notes off.
-    OmniModeOn { channel: u4 },
+    OmniModeOn { channel: U4 },
 
     /// It also causes all notes off.
-    MonoModeOn { channel: u4, num_channels: u7 },
+    MonoModeOn { channel: U4, num_channels: U7 },
 
     /// It also causes all notes off.
-    PolyModeOn { channel: u4 },
+    PolyModeOn { channel: U4 },
 
     // --- System Common Messages
 
     /// This message type allows manufacturers to create their own messages (such
     /// as bulk dumps, patch parameters, and other non-spec data) and provides a mechanism for
     /// creating additional MIDI Specification messages.
-    SysEx { data: Vec<u7> },
+    SysEx { data: Vec<U7> },
 
     /// MIDI Time Code Quarter Frame.
     /// The type determines how to interpret the value:
@@ -76,16 +76,16 @@ pub enum Message {
     /// 5 Current Minutes High Nibble
     /// 6 Current Hours Low Nibble
     /// 7 Current Hours High Nibble and SMPTE Type
-    MTCQuarterFrame { msg_type: u3, value: u4 },
+    MTCQuarterFrame { msg_type: U3, value: U4 },
 
     /// Song Position Pointer.
     /// This is an internal 14 bit register that holds the number of MIDI beats
     /// (1 beat= six MIDI clocks) since the start of the song.
-    SongPositionPointer { beats: u14 },
+    SongPositionPointer { beats: U14 },
 
     /// Song Select
     /// The Song Select specifies which sequence or song is to be played.
-    SongSelect { song: u7 },
+    SongSelect { song: U7 },
 
     /// Upon receiving a Tune Request, all analog synthesizers should tune their oscillators.
     TuneRequest,

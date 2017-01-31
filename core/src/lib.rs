@@ -11,5 +11,3 @@ pub mod oscillator;
 pub mod filter;
 
 pub mod panning;
-
-pub mod processing;

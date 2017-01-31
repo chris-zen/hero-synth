@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use hero_core::processing::{AudioInputBuffer, AudioOutputBuffer};
+use audio::processing::{AudioInputBuffer, AudioOutputBuffer};
 
 pub struct DeinterlacedOutputBuffer {
     buffer: *mut f32
