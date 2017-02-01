@@ -4,11 +4,12 @@ version = "0.1.0"
 authors = ["Christian Perez-Llamas"]
 
 [dependencies]
-portaudio = "0.7.0"
-portmidi = "^0.2"
-# coremidi = "0.2.0"
 docopt = "0.7.0"
 rand = "0.3.15"
+
+portaudio = "0.7.0"
+portmidi = "^0.2"
+rosc = "0.1.5"
 
 hero_core = { path = "../core" }
 hero_synth = { path = "../synth" }
