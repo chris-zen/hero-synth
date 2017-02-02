@@ -1,11 +1,14 @@
 use std::collections::btree_map::{self, BTreeMap, Entry};
 
+use rosc::OscPacket;
+
 use engine::types::Timestamp;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
     NoteOn { key: u8, velocity: f64 },
-    NoteOff { key: u8, velocity: f64 }
+    NoteOff { key: u8, velocity: f64 },
+    Control(OscPacket),
 }
 
 #[derive(Debug, Clone)]
@@ -34,22 +37,28 @@ impl Event {
 }
 
 #[derive(Debug, Clone)]
-pub struct DeviceEvents {
-    device: String,
+pub enum Port {
+    Midi(String),
+    Osc(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct PortEvents {
+    port: Port,
     events: Vec<Event>
 }
 
-impl DeviceEvents {
-    pub fn new(device: &str, events: Vec<Event>) -> Self {
-        DeviceEvents {
-            device: device.to_string(),
+impl PortEvents {
+    pub fn new(port: Port, events: Vec<Event>) -> Self {
+        PortEvents {
+            port: port,
             events: events
         }
     }
 
     #[inline]
-    pub fn device(&self) -> &str {
-        &self.device
+    pub fn port(&self) -> &Port {
+        &self.port
     }
 
     #[inline]

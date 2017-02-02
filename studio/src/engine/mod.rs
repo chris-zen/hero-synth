@@ -1,7 +1,6 @@
 pub mod events;
 pub mod types;
 
-// use std::cmp::Ordering as O;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::atomic::{Ordering, AtomicBool};
 use std::sync::{Arc, Mutex};
@@ -13,22 +12,9 @@ use hero_synth::synth::Synth as HeroSynth;
 use audio;
 use audio::processing::{AudioOutputBuffer, ProcessingArgs, Processor};
 
-use self::types::Timestamp;
+pub use self::types::Timestamp;
+pub use self::events::{Message, Event, Port, PortEvents};
 use self::events::EventsBuffer;
-pub use self::events::{Event, DeviceEvents};
-pub use self::events::Message;
-
-// impl Ord for midi::Event {
-//     fn cmp(&self, other: &midi::Event) -> O {
-//         other.timestamp().cmp(&self.timestamp())
-//     }
-// }
-//
-// impl PartialOrd for midi::Event {
-//     fn partial_cmp(&self, other: &midi::Event) -> Option<O> {
-//         Some(self.cmp(other))
-//     }
-// }
 
 
 pub struct Engine {
@@ -37,14 +23,14 @@ pub struct Engine {
     running: Arc<AtomicBool>,
     events_input_join_handler: Option<JoinHandle<()>>,
     input_events: Arc<Mutex<EventsBuffer>>,
-    // output_events_sender: Sender<DeviceEvents>
+    // output_events_sender: Sender<PortEvents>
     hero_synth: HeroSynth
 }
 
 unsafe impl Send for Engine {}
 
 impl Engine {
-    pub fn new(sample_rate: SampleRate/*, events_sender: Sender<DeviceEvents>*/) -> Engine {
+    pub fn new(sample_rate: SampleRate/*, events_sender: Sender<PortEvents>*/) -> Engine {
         let mut hero_synth = HeroSynth::new(sample_rate);
         // hero_synth.note_on(33, 1.0);
         // hero_synth.note_on(81, 0.5);
@@ -70,7 +56,7 @@ impl Engine {
         self.running.load(Ordering::Relaxed)
     }
 
-    pub fn start(&mut self, events_receiver: Receiver<DeviceEvents>) {
+    pub fn start(&mut self, events_receiver: Receiver<PortEvents>) {
         let running = self.running.swap(true, Ordering::Relaxed);
         if !running {
             let running = self.running.clone();
@@ -90,7 +76,7 @@ impl Engine {
 
     fn events_input_loop(
         running: &AtomicBool,
-        events_receiver: Receiver<DeviceEvents>,
+        events_receiver: Receiver<PortEvents>,
         input_events_mutex: Arc<Mutex<EventsBuffer>>) {
 
         while running.load(Ordering::Relaxed) {
@@ -124,6 +110,7 @@ impl<'a, O> Processor<'a, f32, O> for Engine
                     match message {
                         &Message::NoteOn { key, velocity } => self.hero_synth.note_on(key, velocity),
                         &Message::NoteOff { key, velocity } => self.hero_synth.note_off(key, velocity),
+                        &Message::Control(ref packet) => self.hero_synth.control(packet),
                     }
                 }
             }

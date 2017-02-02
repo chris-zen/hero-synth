@@ -4,4 +4,6 @@ version = "0.1.0"
 authors = ["Christian Perez-Llamas"]
 
 [dependencies]
+rosc = "0.1.5"
+
 hero_core = { path = "../core" }

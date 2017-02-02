@@ -24,21 +24,20 @@ use control::Control;
 
 fn main() {
 
-    // let (ctrl_notes_tx, ctrl_notes_rx): (Sender<DeviceNoteEvents>, Receiver<DeviceNoteEvents>) = channel();
-    let (engine_notes_tx, engine_notes_rx): (Sender<engine::DeviceEvents>, Receiver<engine::DeviceEvents>) = channel();
+    let (engine_notes_tx, engine_notes_rx): (Sender<engine::PortEvents>, Receiver<engine::PortEvents>) = channel();
 
     let mut engine = Engine::new(SAMPLE_RATE);
     engine.start(engine_notes_rx);
 
     let engine_mutex = Arc::new(Mutex::new(engine));
 
-    let (midi_input_tx, midi_input_rx): (Sender<midi::DeviceEvents>, Receiver<midi::DeviceEvents>) = channel();
+    let (midi_input_tx, midi_input_rx): (Sender<midi::PortEvents>, Receiver<midi::PortEvents>) = channel();
 
     let mut midi = Midi::new();
     midi.start(midi_input_tx);
 
     let (osc_input_tx, osc_input_rx): (Sender<rosc::OscPacket>, Receiver<rosc::OscPacket>) = channel();
-    let mut osc = Osc::new("192.168.1.42:7400");
+    let mut osc = Osc::new("0.0.0.0:7400");
     osc.start(osc_input_tx);
 
     let mut control = Control::new();

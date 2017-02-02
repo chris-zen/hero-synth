@@ -1,3 +1,4 @@
+extern crate rosc;
 extern crate hero_core;
 
 pub mod patch;

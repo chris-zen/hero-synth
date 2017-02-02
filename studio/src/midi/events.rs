@@ -26,22 +26,22 @@ impl Event {
 }
 
 #[derive(Clone)]
-pub struct DeviceEvents {
-    device: String,
+pub struct PortEvents {
+    port: String,
     events: Vec<Event>
 }
 
-impl DeviceEvents {
-    pub fn new(device: &str, events: Vec<Event>) -> DeviceEvents {
-        DeviceEvents {
-            device: device.to_string(),
+impl PortEvents {
+    pub fn new(port: &str, events: Vec<Event>) -> PortEvents {
+        PortEvents {
+            port: port.to_string(),
             events: events
         }
     }
 
     #[inline]
-    pub fn device(&self) -> &str {
-        &self.device
+    pub fn port(&self) -> &str {
+        &self.port
     }
 
     #[inline]

@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
+use rosc::OscPacket;
+
 use hero_core::types::{SampleRate, DEFAULT_SAMPLE_RATE};
-// use hero_core::processing::{AudioOutputBuffer, ProcessingArgs, Processor};
 
 use patch::Patch;
 use voice::Voice;
 
 const MAX_KEYS: usize = 128;
+
 
 pub struct Synth {
     sample_rate: SampleRate,
@@ -62,6 +64,10 @@ impl Synth {
         let ref mut voice = self.voices[voice_index];
         voice.note_off(vel);
         self.active_voices.remove(&voice_index);
+    }
+
+    pub fn control(&mut self, packet: &OscPacket) {
+
     }
 
     pub fn process(&mut self) -> (f64, f64) {

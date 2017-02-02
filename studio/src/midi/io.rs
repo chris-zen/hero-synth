@@ -7,7 +7,7 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 use portmidi;
 
 use midi::decoder::Decoder;
-use midi::events::{Event, DeviceEvents};
+use midi::events::{Event, PortEvents};
 use midi::types::Timestamp;
 
 const MIDI_BUF_LEN: usize = 1024;
@@ -29,7 +29,7 @@ impl Midi {
         }
     }
 
-    pub fn start(&mut self, sender: Sender<DeviceEvents>/*, receiver: Receiver<Vec<Event>>*/) {
+    pub fn start(&mut self, sender: Sender<PortEvents>/*, receiver: Receiver<Vec<Event>>*/) {
         let running = self.running.swap(true, Ordering::Relaxed);
         if !running {
             let in_devices: Vec<portmidi::DeviceInfo> =
@@ -57,11 +57,11 @@ impl Midi {
 
     fn read_loop(in_ports: &Vec<portmidi::InputPort>,
                  running: &AtomicBool, finished: &AtomicBool,
-                 sender: Sender<DeviceEvents>) {
+                 sender: Sender<PortEvents>) {
 
         finished.store(false, Ordering::Relaxed);
         let loop_delay = Duration::from_millis(MIDI_LOOP_DELAY_MILLIS);
-        let mut dev_events = Vec::<DeviceEvents>::with_capacity(in_ports.len());
+        let mut dev_events = Vec::<PortEvents>::with_capacity(in_ports.len());
         while running.load(Ordering::Relaxed) {
             Self::read_events(&in_ports, &mut dev_events);
             if !dev_events.is_empty() {
@@ -76,7 +76,7 @@ impl Midi {
         finished.store(true, Ordering::Relaxed);
     }
 
-    fn read_events(in_ports: &Vec<portmidi::InputPort>, dev_events: &mut Vec<DeviceEvents>) {
+    fn read_events(in_ports: &Vec<portmidi::InputPort>, dev_events: &mut Vec<PortEvents>) {
         dev_events.clear();
         for port in in_ports {
             if let Ok(Some(raw_events)) = port.read_n(MIDI_BUF_LEN) {
@@ -84,7 +84,7 @@ impl Midi {
                 if !events.is_empty() {
                     let device = port.device();
                     let dev_name = device.name();
-                    dev_events.push(DeviceEvents::new(dev_name, events));
+                    dev_events.push(PortEvents::new(dev_name, events));
                 }
             }
         }
