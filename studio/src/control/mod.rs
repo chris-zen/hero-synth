@@ -27,13 +27,14 @@ impl Control {
     pub fn start(&mut self,
                  midi_input_rx: Receiver<midi::PortEvents>,
                  osc_input_rx: Receiver<rosc::OscPacket>,
-                 host_events_tx: Sender<engine::PortEvents>) {
+                 engine_input_tx: Sender<engine::PortEvents>,
+                 engine_output_rx: Receiver<engine::PortEvents>) {
 
-        let midi_events_tx = host_events_tx.clone();
+        let midi_events_tx = engine_input_tx.clone();
         self.midi_join_handler = Some(thread::spawn(move || {
             Control::midi_input(midi_input_rx, midi_events_tx) }));
 
-        let osc_events_tx = host_events_tx.clone();
+        let osc_events_tx = engine_input_tx.clone();
         self.osc_join_handler = Some(thread::spawn(move || {
             Control::osc_input(osc_input_rx, osc_events_tx) }));
     }
@@ -46,7 +47,7 @@ impl Control {
     }
 
     fn midi_input(midi_input_rx: Receiver<midi::PortEvents>,
-                  host_events_tx: Sender<engine::PortEvents>) {
+                  engine_input_tx: Sender<engine::PortEvents>) {
 
         for midi_port_events in midi_input_rx {
             let mut engine_events: Vec<engine::Event> = Vec::new();
@@ -54,13 +55,13 @@ impl Control {
                 match midi_event.message() {
                     midi::Message::NoteOn { key, velocity, .. } => {
                         let velocity = velocity as f64 / 127.0;
-                        let engine_message = engine::Message::NoteOn {key: key, velocity: velocity };
+                        let engine_message = engine::Message::NoteOn {key: key as usize, velocity: velocity };
                         let engine_event = engine::Event::new(midi_event.timestamp(), engine_message);
                         engine_events.push(engine_event);
                     },
                     midi::Message::NoteOff { key, velocity, .. } => {
                         let velocity = velocity as f64 / 127.0;
-                        let engine_message = engine::Message::NoteOff {key: key, velocity: velocity };
+                        let engine_message = engine::Message::NoteOff {key: key as usize, velocity: velocity };
                         let engine_event = engine::Event::new(midi_event.timestamp(), engine_message);
                         engine_events.push(engine_event);
                     },
@@ -69,12 +70,12 @@ impl Control {
             }
             let device = engine::events::Port::Midi(midi_port_events.port().to_string());
             let engine_src_events = engine::PortEvents::new(device, engine_events);
-            host_events_tx.send(engine_src_events).unwrap();
+            engine_input_tx.send(engine_src_events).unwrap();
         }
     }
 
     fn osc_input(osc_input_rx: Receiver<rosc::OscPacket>,
-                  host_events_tx: Sender<engine::PortEvents>) {
+                  engine_input_tx: Sender<engine::PortEvents>) {
 
         const NOW_TIMESTAMP: Timestamp = 0 as Timestamp;
         let default_port: engine::Port = engine::Port::Osc("default".to_string());
@@ -82,7 +83,7 @@ impl Control {
         for osc_packet in osc_input_rx {
             let event = engine::Event::new(NOW_TIMESTAMP, engine::Message::Control(osc_packet));
             let src_events = engine::PortEvents::new(default_port.clone(), vec![event]);
-            host_events_tx.send(src_events).unwrap();
+            engine_input_tx.send(src_events).unwrap();
         }
     }
 }

@@ -6,8 +6,8 @@ use engine::types::Timestamp;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
-    NoteOn { key: u8, velocity: f64 },
-    NoteOff { key: u8, velocity: f64 },
+    NoteOn { key: usize, velocity: f64 },
+    NoteOff { key: usize, velocity: f64 },
     Control(OscPacket),
 }
 
@@ -40,6 +40,7 @@ impl Event {
 pub enum Port {
     Midi(String),
     Osc(String),
+    OscAll,
 }
 
 #[derive(Debug, Clone)]

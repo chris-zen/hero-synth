@@ -4,6 +4,8 @@
 
 pub mod types;
 
+pub mod freq;
+
 pub mod wavetable;
 
 pub mod oscillator;

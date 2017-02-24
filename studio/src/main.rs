@@ -3,6 +3,8 @@
 extern crate portaudio;
 extern crate portmidi;
 extern crate rosc;
+extern crate tokio_core;
+extern crate futures;
 
 extern crate hero_core;
 extern crate hero_synth;
@@ -24,10 +26,11 @@ use control::Control;
 
 fn main() {
 
-    let (engine_notes_tx, engine_notes_rx): (Sender<engine::PortEvents>, Receiver<engine::PortEvents>) = channel();
+    let (engine_input_tx, engine_input_rx): (Sender<engine::PortEvents>, Receiver<engine::PortEvents>) = channel();
+    let (engine_output_tx, engine_output_rx): (Sender<engine::PortEvents>, Receiver<engine::PortEvents>) = channel();
 
     let mut engine = Engine::new(SAMPLE_RATE);
-    engine.start(engine_notes_rx);
+    engine.start(engine_input_rx, engine_output_tx.clone());
 
     let engine_mutex = Arc::new(Mutex::new(engine));
 
@@ -37,11 +40,14 @@ fn main() {
     midi.start(midi_input_tx);
 
     let (osc_input_tx, osc_input_rx): (Sender<rosc::OscPacket>, Receiver<rosc::OscPacket>) = channel();
+    let (osc_output_tx, osc_output_rx): (Sender<rosc::OscPacket>, Receiver<rosc::OscPacket>) = channel();
     let mut osc = Osc::new("0.0.0.0:7400");
-    osc.start(osc_input_tx);
+    osc.start(osc_input_tx, osc_output_rx);
 
     let mut control = Control::new();
-    control.start(midi_input_rx, osc_input_rx, engine_notes_tx);
+    control.start(
+        midi_input_rx, osc_input_rx,
+        engine_input_tx, engine_output_rx);
 
     let pa_ctx = portaudio::PortAudio::new().unwrap();
     let mut stream = audio_start(&pa_ctx, engine_mutex.clone()).unwrap();
